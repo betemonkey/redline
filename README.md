@@ -2,8 +2,19 @@
 
 Mark up what Claude shows you instead of describing it. A Claude Code mod for Windows.
 
-- **Capture screen**: freeze the screen, drag a box, then draw, highlight and pin comments on it. Send attaches the marked-up image (plus the text under your marks, read with Windows OCR) to your next message, or sends it straight away.
-- **Review conversation**: opens the whole conversation in its own window, kept live as Claude replies. Select text to comment, highlight or cross out, or draw over it. Claude gets the exact quotes and where they are, with no image to read.
+No more "the second button on the left, no, the other one". Point at it, scribble on it, pin a comment on it, and send it to Claude.
+
+### Capture screen
+
+Freeze the screen, drag a box, then draw, highlight and pin comments right on it. **Send** puts the marked-up image in front of Claude, along with the text under your marks (read with Windows OCR).
+
+![Redline drawing on a frozen screen: a boxed price, a scribbled-out feature, a highlighted sentence and four comment pins](docs/capture.png)
+
+### Review conversation
+
+Long reply? Open the whole conversation in its own window, kept live as Claude answers. Select text to comment on it, highlight it or cross it out, or switch to **Draw** and circle things. One comment can cover several marks. Claude gets the exact quotes and where they are, so it never has to guess what you meant.
+
+![Redline Text: a reply with highlights, a crossed-out line and a circled line, and their comments in the margin](docs/review.png)
 
 Also included: dictation in comments (🎤), seven colour palettes, and the global hotkey **Ctrl+Alt+Shift+R**.
 
