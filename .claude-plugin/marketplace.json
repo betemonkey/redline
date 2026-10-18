@@ -1,0 +1,5 @@
+{
+  "name": "monkey-mods",
+  "owner": { "name": "betemonkey" },
+  "plugins": [{ "name": "redline", "source": "./" }]
+}

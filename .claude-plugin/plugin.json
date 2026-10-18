@@ -1,0 +1,6 @@
+{
+  "name": "redline",
+  "version": "0.1.0",
+  "description": "Freeze the screen, drag a box, draw and comment on it; the marked-up image rides along with your next message.",
+  "types": "./types/index.d.ts"
+}

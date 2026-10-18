@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2064%2064%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22%231f1f1d%22/%3E%3Cpath%20d%3D%22M14%2050V30a18%2018%200%201%201%2018%2018H14z%22%20fill%3D%22%23e5484d%22/%3E%3Cpath%20d%3D%22M23%2036c4-3%206%202%2010-1s5-6%209-4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.4%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"> <!-- Redline icon (comment pin): title bar + taskbar -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redline Text</title>
+<!-- Redline Text: review a whole Claude reply. One self-contained file: no install, no network, works offline.
+     Opened by the Redline mod it loads Claude's last reply and can send straight back; opened on its own
+     (double-click, e.g. on a locked-down work PC) you paste a reply in and use "Copy for Claude". -->
+<script>/* palette before first paint (no flash); the helper's saved choice is applied right after */
+try{const k=localStorage.getItem('redlinePalette');if(k&&k!=='auto')document.documentElement.dataset.pal=k}catch{}</script>
+<style>
+/* ===== palettes: steamshot's, token for token (steam_snapshot/web/index.html). Auto follows Windows light/dark ===== */
+:root{color-scheme:light;--page:#f2f2f0;--surface:#ffffff;--surface-2:#e9e9e5;--ink:#151514;--ink-2:#56554f;--muted:#8a8983;--border:rgba(21,21,20,.10);--accent:#2a78d6;--accent-wash:#e1ecfa;--on-accent:#ffffff}
+@media (prefers-color-scheme:dark){:root:not([data-pal="light"]){color-scheme:dark;--page:#0e0e0f;--surface:#19191a;--surface-2:#242425;--ink:#f1f1ef;--ink-2:#b7b6b0;--muted:#85847f;--border:rgba(255,255,255,.09);--accent:#3987e5;--accent-wash:#17263a;--on-accent:#08121f}}
+:root[data-pal="black"]{color-scheme:dark;--page:#0e0e0f;--surface:#19191a;--surface-2:#242425;--ink:#f1f1ef;--ink-2:#b7b6b0;--muted:#85847f;--border:rgba(255,255,255,.09);--accent:#3987e5;--accent-wash:#17263a;--on-accent:#08121f}
+:root[data-pal="steam"]{color-scheme:dark;--page:#1b2838;--surface:#22344a;--surface-2:#2c435c;--ink:#e8f0f7;--ink-2:#a9bccd;--muted:#7d92a6;--border:rgba(160,200,240,.12);--accent:#66c0f4;--accent-wash:#1f4560;--on-accent:#0b1b28}
+:root[data-pal="slate"]{color-scheme:dark;--page:#1f232b;--surface:#2a2f38;--surface-2:#353b46;--ink:#eef0f3;--ink-2:#b9c0ca;--muted:#8a93a2;--border:rgba(255,255,255,.09);--accent:#5b9df0;--accent-wash:#27384f;--on-accent:#0b1420}
+:root[data-pal="forest"]{color-scheme:dark;--page:#13211d;--surface:#1b2d27;--surface-2:#243b34;--ink:#ecf4f0;--ink-2:#aac4b9;--muted:#7e988d;--border:rgba(200,255,230,.09);--accent:#46c98d;--accent-wash:#1a3d2f;--on-accent:#062016}
+:root[data-pal="ember"]{color-scheme:dark;--page:#1f1b18;--surface:#2a2420;--surface-2:#362e29;--ink:#f6f0ea;--ink-2:#cbbfb4;--muted:#998c80;--border:rgba(255,230,210,.09);--accent:#f08a4f;--accent-wash:#40291b;--on-accent:#1f1007}
+/* the colour button and its menu (opens upward: the button sits in a bar at the bottom) */
+.palette{position:relative;display:inline-flex}
+.pal-btn{display:inline-flex;align-items:center;justify-content:center}
+.psw{width:16px;height:16px;border-radius:50%;display:inline-block;flex:none;border:1px solid rgba(128,128,128,.45);background:linear-gradient(135deg,var(--sw-page) 50%,var(--sw-accent) 50%)}
+.pal-menu{position:absolute;right:0;bottom:calc(100% + 8px);z-index:40;min-width:190px;padding:6px;display:grid;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.28)}
+.pal-menu[hidden]{display:none}
+.pal-menu button{border:0;background:none;display:flex;align-items:center;gap:10px;text-align:left;padding:7px 10px;border-radius:8px;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;height:auto;width:auto}
+.pal-menu button:hover,.pal-menu button:focus-visible{background:var(--surface-2);outline:none}
+.pal-menu button[aria-checked="true"]{background:var(--accent-wash)}
+.pal-menu button[aria-checked="true"]::after{content:"✓";margin-left:auto;color:var(--accent);font-weight:700}
+.pal-menu .hint{color:var(--muted);font-size:12px;padding:4px 10px 2px}
+
+  :root{--bg:var(--page);--paper:var(--surface);--card:var(--surface);--line:var(--border);--dim:var(--muted);
+    --red:#e5484d;--yellow:#f5b83d;--font:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--mono:"Cascadia Mono",Consolas,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--font);overflow-x:clip} /* clip, not hidden: hidden breaks the sticky toolbar */
+  .top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:15;flex-wrap:wrap}
+  .brand{font-weight:700;color:var(--accent)}
+  .src{font-size:13px;color:var(--dim)}.src b{color:var(--ink);font-weight:600}
+  .src a{color:var(--accent);cursor:pointer}
+  .grow{flex:1}
+  .btn{height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:inherit;font-size:13px;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--border)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+  .btn.on{border-color:color-mix(in srgb,var(--accent) 70%,transparent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .count{font-size:12.5px;color:var(--dim)}
+  #groupBtn{border-color:rgba(229,72,77,.55);background:rgba(229,72,77,.12)}
+  #mpop{position:absolute;display:none;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;box-shadow:0 10px 26px rgba(0,0,0,.5);z-index:31}
+  #mpop button{height:30px;border:0;background:none;color:var(--ink);border-radius:7px;padding:0 9px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+  #mpop button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+  mark.hl.taken,mark.st.taken{box-shadow:inset 0 -2px 0 var(--red)}
+  .cmt .q{-webkit-line-clamp:3}
+  .cmt .q div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .note-in{height:32px;width:230px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:inherit;font-size:13px;padding:0 10px;outline:none}
+  .note-in:focus{border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;max-width:1240px;margin:0 auto}
+  .docwrap{position:relative;padding:24px 36px 120px;border-right:1px solid var(--line);min-height:calc(100vh - 53px)}
+  .doc{max-width:760px;position:relative}
+  .doc h1,.doc h2,.doc h3,.doc h4{margin:20px 0 6px;line-height:1.3}
+  .doc h1{font-size:22px}.doc h2{font-size:19px}.doc h3{font-size:16.5px}.doc h4{font-size:15px}
+  .doc p,.doc li{color:var(--ink-2)}
+  .doc p{margin:8px 0}
+  .doc code{font:13px var(--mono);background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:5px}
+  .doc pre{background:#111110;border:1px solid var(--line);border-radius:9px;padding:10px 12px;overflow:auto}
+  .doc pre code{background:none;padding:0}
+  .doc ol,.doc ul{padding-left:24px;margin:6px 0}
+  .doc blockquote{margin:8px 0;padding-left:12px;border-left:3px solid var(--line);color:var(--dim)}
+  .doc table{border-collapse:collapse;margin:10px 0;font-size:14px}
+  .doc th,.doc td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+  .doc th{background:var(--surface-2)}
+  .doc a{color:var(--accent)}
+  .doc hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+  .msg{margin:0 0 18px;padding:2px 0 4px}
+  .msg .who{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin:0 0 2px}
+  .msg-user{border-left:3px solid var(--border);padding-left:12px}
+  .msg-user .body p{color:var(--ink-2)}
+  .msg-claude .who{color:var(--accent)}
+  .msg + .msg{border-top:1px solid var(--border);padding-top:16px}
+  mark.hl{background:rgba(245,184,61,.32);color:inherit;border-radius:3px;padding:0 1px;cursor:pointer}
+  mark.cm{background:rgba(229,72,77,.16);color:inherit;border-bottom:2px solid var(--red);border-radius:2px;cursor:pointer}
+  mark.cm.hot{background:rgba(229,72,77,.32)}
+  mark.st{background:none;color:var(--dim);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;cursor:pointer}
+  sup.pin{font:700 10px var(--mono);color:#fff;background:var(--red);border-radius:8px 8px 8px 0;padding:1px 4px;margin-left:2px;position:relative;top:-2px;user-select:none}
+  canvas#ink{position:absolute;left:0;top:0;pointer-events:none}
+  .drawing canvas#ink{pointer-events:auto;cursor:crosshair}
+  .paste{border:1.5px dashed var(--border);border-radius:14px;padding:40px 24px;text-align:center;color:var(--dim);margin:30px 0}
+  .paste b{color:var(--ink);display:block;font-size:17px;margin-bottom:6px}
+  .paste textarea{width:100%;min-height:160px;margin-top:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;color:var(--ink);font:13px var(--mono);padding:10px;outline:none}
+  #pop{position:absolute;display:none;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;box-shadow:0 10px 26px rgba(0,0,0,.5);z-index:30}
+  #pop button{height:30px;border:0;background:none;color:var(--ink);border-radius:7px;padding:0 9px;font:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+  #pop button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .margin{position:relative;padding:24px 14px}
+  .margin h4{margin:0 0 10px;font-size:12px;color:var(--dim);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .cmt{position:absolute;left:14px;right:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px 9px;transition:top .18s,box-shadow .18s}
+  .cmt.hot{border-color:rgba(229,72,77,.6);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  .cmt .hd{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim)}
+  .cmt .n{font:700 10px var(--mono);color:#fff;background:var(--red);border-radius:8px 8px 8px 0;padding:1px 5px}
+  .cmt .mic,.cmt .lang{border:0;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink);border-radius:6px;height:20px;min-width:22px;padding:0 4px;cursor:pointer;font:600 10px var(--mono)}
+  .cmt .mic{margin-left:auto}
+  .rec{background:#e5484d!important;color:#fff!important;animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .cmt .x{border:0;background:none;color:var(--dim);cursor:pointer;font-size:13px}
+  .cmt .x:hover{color:var(--ink)}
+  .cmt .q{font-size:12px;color:var(--dim);border-left:2px solid var(--line);padding-left:7px;margin:4px 0;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+  .cmt .t{font-size:13.5px;outline:none;border-radius:5px;padding:1px 3px;margin:0 -3px;word-break:break-word;white-space:pre-wrap;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:1.6em}
+  .cmt .t:empty::before{content:"Write your comment…";color:var(--dim)}
+  .cmt.open .t,.cmt .t:focus{display:block;-webkit-line-clamp:unset}
+  .cmt .t:focus{background:color-mix(in srgb,var(--ink) 5%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 60%,transparent)}
+  .cmt .more{font-size:11.5px;color:var(--accent);cursor:pointer;border:0;background:none;padding:0}
+  .empty{color:var(--dim);font-size:13px}
+  .dock{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;z-index:25;
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 14px 36px rgba(0,0,0,.55);backdrop-filter:blur(8px);max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center}
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:2px}
+  .segb{height:28px;border:0;border-radius:8px;background:none;color:var(--dim);font:inherit;font-size:13px;padding:0 12px;cursor:pointer;white-space:nowrap}
+  .segb.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+  .btn.icon{width:32px;padding:0;justify-content:center}
+  .dock .note-in{width:200px}
+  .docwrap{padding-bottom:140px}
+  .pending{border:1px dashed var(--border);border-radius:10px;padding:10px 12px;color:var(--dim);display:flex;align-items:center;gap:10px;margin-top:2px}
+  .pending .tm{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+  .dots{display:inline-flex;gap:4px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.3;animation:bounce 1.2s infinite}
+  .dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+  .spin{width:13px;height:13px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn.busy{background:color-mix(in srgb,var(--accent) 18%,var(--surface));border-color:color-mix(in srgb,var(--accent) 40%,var(--surface));color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:8px;height:32px;border-radius:999px;padding:0 12px;font-size:13px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+  .pill.ok{border-color:rgba(61,187,108,.5);color:var(--ink)}
+  .pill .jump{color:var(--accent);font-weight:600;cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.dots i,.spin{animation:none;opacity:.8}}
+  .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);padding:8px 14px;border-radius:9px;opacity:0;transition:.2s;z-index:50;pointer-events:none}
+  .toast.show{opacity:1}
+  .done{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:60}
+  .done.show{display:grid}
+  .done div{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 26px;text-align:center}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}.docwrap{border-right:0;padding:18px 16px 60px}.margin{border-top:1px solid var(--line)}.cmt{position:relative;left:0;right:0;top:0!important;margin-bottom:8px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">Redline Text</span>
+  <span class="src" id="src">Paste a reply to review it</span>
+  <span class="grow"></span>
+  <span class="count" id="count">nothing marked yet</span>
+</div>
+<div class="dock" id="dock">
+  <div class="seg" role="group" aria-label="Mode">
+    <button class="segb on" id="textBtn" title="Select text to comment, highlight or cross out (T)">𝐓 Text</button>
+    <button class="segb" id="drawBtn" title="Draw on the text; it scrolls with it (D)">✏️ Draw</button>
+  </div>
+  <button class="btn icon" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+  <button class="btn" id="groupBtn" style="display:none" title="One comment for every highlight, cross-out and drawing that has none yet (C)">💬 Comment on marks</button>
+  <input class="note-in" id="note" placeholder="Note for Claude…" spellcheck="false">
+  <button class="btn icon" id="noteMic" title="Dictate the note (speech to text)">🎤</button>
+  <div class="palette"><button class="btn icon pal-btn" id="palBtn" aria-haspopup="true" aria-expanded="false"></button><div class="pal-menu" id="palMenu" role="menu" aria-label="Colours" hidden></div></div>
+  <button class="btn" id="copyBtn" title="Copies a text block you can paste into any Claude chat">Copy</button>
+  <span class="pill" id="status" style="display:none"></span>
+  <button class="btn primary" id="sendBtn" style="display:none" title="Send to Claude (Ctrl+Enter)">Send to Claude</button>
+</div>
+<div class="layout">
+  <div class="docwrap" id="docwrap">
+    <article class="doc" id="doc">
+      <div class="paste" id="pasteZone"><b>Paste a Claude reply here</b>Use Claude's copy button on a reply, then press Ctrl+V anywhere on this page (or paste into the box). In Claude Code, <code>/redline text</code> opens the whole conversation here and keeps it up to date.<textarea id="pasteBox" placeholder="…or paste here"></textarea></div>
+    </article>
+    <canvas id="ink"></canvas>
+    <div id="mpop"><button data-a="comment">💬 Comment on this</button><button data-a="remove">✕ Remove</button></div>
+    <div id="pop">
+      <button data-a="comment">💬 Comment</button>
+      <button data-a="voice" title="Comment by voice: the comment opens and starts listening">🎤</button>
+      <button data-a="hl"><span class="dot" style="background:var(--yellow)"></span>Highlight</button>
+      <button data-a="st"><span style="text-decoration:line-through;text-decoration-color:var(--red)">abc</span> Cross out</button>
+    </div>
+  </div>
+  <aside class="margin" id="margin">
+    <h4>Comments</h4>
+    <div class="empty" id="empty">Select any text to comment on it, highlight it or cross it out. Long reply? Just scroll.</div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+<div class="done" id="done"><div><div style="font-size:28px">✓</div><b>Sent to Claude</b><p style="color:var(--dim);margin:6px 0 0">You can close this window.</p></div></div>
+
+<script>
+
+/* ---------- palette (steamshot's set). Saved by the helper, so both Redline windows share it ---------- */
+const PALETTES=[["auto","Auto",null,null],["black","Black","#0e0e0f","#3987e5"],["steam","Steam","#1b2838","#66c0f4"],["slate","Slate","#1f232b","#5b9df0"],
+  ["forest","Forest","#13211d","#46c98d"],["ember","Ember","#1f1b18","#f08a4f"],["light","Light","#f2f2f0","#2a78d6"]];
+const palette=(function(){
+  const root=document.documentElement,web=location.protocol.startsWith('http');
+  const sysDark=()=>matchMedia('(prefers-color-scheme: dark)').matches;
+  let current='auto',btn=null,menu=null;
+  const swatch=k=>{const p=PALETTES.find(x=>x[0]===k);const [pg,ac]=p[2]?[p[2],p[3]]:(sysDark()?['#0e0e0f','#3987e5']:['#f2f2f0','#2a78d6']);
+    return `<i class="psw" style="--sw-page:${pg};--sw-accent:${ac}"></i>`};
+  function paint(){if(!btn)return;const name=PALETTES.find(p=>p[0]===current)[1];btn.innerHTML=swatch(current);btn.title='Colours: '+name;btn.setAttribute('aria-label','Colours: '+name);
+    if(menu)menu.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.palette===current)))}
+  function apply(k){if(!PALETTES.some(p=>p[0]===k))k='auto';current=k;if(k==='auto')delete root.dataset.pal;else root.dataset.pal=k;paint();dispatchEvent(new Event('palettechange'))}
+  function save(k){try{localStorage.setItem('redlinePalette',k)}catch{};if(web)fetch('/prefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({palette:k})}).catch(()=>{})}
+  function mount(b,m){ // b: the colour button, m: its menu (built here)
+    btn=b;menu=m;
+    m.innerHTML=PALETTES.map(([k,name])=>`<button role="menuitemradio" data-palette="${k}">${swatch(k)}${name}</button>`).join('')+'<div class="hint">Auto follows your system\'s light or dark mode.</div>';
+    const close=()=>{m.hidden=true;b.setAttribute('aria-expanded','false')};
+    b.onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;b.setAttribute('aria-expanded',String(!m.hidden));if(!m.hidden)m.querySelector(`[data-palette="${current}"]`).focus()};
+    m.onclick=e=>{const x=e.target.closest('button[data-palette]');if(!x)return;apply(x.dataset.palette);save(x.dataset.palette);close();b.focus()};
+    m.onkeydown=e=>{const items=[...m.querySelectorAll('button')],i=items.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length].focus()}else if(e.key==='Escape'){close();b.focus()}e.stopPropagation()};
+    document.addEventListener('click',e=>{if(!m.hidden&&!m.contains(e.target)&&e.target!==b)close()});
+    paint()}
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>current==='auto'&&apply('auto'));
+  let k0='auto';try{k0=localStorage.getItem('redlinePalette')||'auto'}catch{};apply(k0);
+  if(web)fetch('/prefs').then(r=>r.json()).then(p=>{if(p&&p.palette&&p.palette!==current){apply(p.palette);try{localStorage.setItem('redlinePalette',p.palette)}catch{}}}).catch(()=>{});
+  return {mount,apply,get current(){return current}};
+})();
+const $=id=>document.getElementById(id);
+const served=location.protocol.startsWith('http'); // opened by the Redline mod (can send) vs a file on its own (copy only)
+let tt;const toast=t=>{$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(tt);tt=setTimeout(()=>$('toast').classList.remove('show'),2000)};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- a small Markdown renderer (no libraries: this file must work offline) ---------- */
+function inline(s){
+  const codes=[];s=s.replace(/`([^`]+)`/g,(_,c)=>{codes.push(c);return `\u0000${codes.length-1}\u0000`});
+  s=esc(s)
+    .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/__([^_]+)__/g,'<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,'$1<i>$2</i>').replace(/(^|[^\w])_([^_\s][^_]*)_(?!\w)/g,'$1<i>$2</i>')
+    .replace(/~~([^~]+)~~/g,'<s>$1</s>')
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,(_,t,u)=>/^(https?:|file:|mailto:)/i.test(u)?`<a href="${u}" target="_blank" rel="noopener">${t}</a>`:t);
+  return s.replace(/\u0000(\d+)\u0000/g,(_,i)=>`<code>${esc(codes[+i])}</code>`);
+}
+function markdown(md){
+  const lines=md.replace(/\r\n?/g,'\n').split('\n'),out=[];let i=0;
+  const isTable=k=>/^\s*\|.*\|\s*$/.test(lines[k]||'')&&/^\s*\|?\s*:?-{2,}/.test(lines[k+1]||'');
+  while(i<lines.length){
+    const l=lines[i];
+    if(/^```/.test(l)){const buf=[];i++;while(i<lines.length&&!/^```/.test(lines[i]))buf.push(lines[i++]);i++;out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`);continue}
+    if(/^\s*$/.test(l)){i++;continue}
+    let m;
+    if((m=/^(#{1,6})\s+(.*)$/.exec(l))){const n=Math.min(4,m[1].length);out.push(`<h${n}>${inline(m[2])}</h${n}>`);i++;continue}
+    if(/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(l)){out.push('<hr>');i++;continue}
+    if(isTable(i)){const row=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>inline(c.trim()));
+      const head=row(lines[i]);i+=2;const body=[];while(i<lines.length&&/^\s*\|/.test(lines[i]))body.push(row(lines[i++]));
+      out.push(`<table><tr>${head.map(c=>`<th>${c}</th>`).join('')}</tr>${body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`);continue}
+    if(/^\s*>/.test(l)){const buf=[];while(i<lines.length&&/^\s*>/.test(lines[i]))buf.push(lines[i++].replace(/^\s*>\s?/,''));out.push(`<blockquote>${markdown(buf.join('\n'))}</blockquote>`);continue}
+    if(/^\s*([-*+]|\d+[.)])\s+/.test(l)){ // lists, nested by indentation
+      const stack=[];let html='';
+      while(i<lines.length&&(/^\s*([-*+]|\d+[.)])\s+/.test(lines[i])||(/^\s{2,}\S/.test(lines[i])&&stack.length))){
+        const li=lines[i];const lm=/^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(li);
+        if(!lm){html=html.replace(/<\/li>$/,'')+' '+inline(li.trim())+'</li>';i++;continue}
+        const ind=lm[1].length,tag=/\d/.test(lm[2])?'ol':'ul';
+        while(stack.length&&ind<stack[stack.length-1].ind){html+=`</${stack.pop().tag}></li>`}
+        if(!stack.length||ind>stack[stack.length-1].ind){if(stack.length)html=html.replace(/<\/li>$/,'');html+=`<${tag}>`;stack.push({ind,tag})}
+        html+=`<li>${inline(lm[3])}</li>`;i++;
+      }
+      while(stack.length){const s=stack.pop();html+=`</${s.tag}>`+(stack.length?'</li>':'')}
+      out.push(html);continue}
+    const buf=[l];i++;while(i<lines.length&&!/^\s*$/.test(lines[i])&&!/^(#{1,6}\s|```|\s*>|\s*([-*+]|\d+[.)])\s+)/.test(lines[i])&&!isTable(i))buf.push(lines[i++]);
+    out.push(`<p>${buf.map(inline).join('<br>')}</p>`);
+  }
+  return out.join('\n');
+}
+
+/* ---------- loading the reply ---------- */
+const doc=$('doc'),wrap=$('docwrap'),pop=$('pop');
+let notes=[],strokes=[],history=[],uid=0;
+let shown=0,live=false,version=0; // messages drawn so far; live = mirrored conversation the mod keeps up to date
+function section(m,i){
+  const s=document.createElement('section');s.className='msg msg-'+(m.role==='user'?'user':'claude');s.dataset.i=i;s.dataset.role=m.role;
+  s.innerHTML=`<div class="who">${m.role==='user'?'You':'Claude'}</div><div class="body">${m.role==='user'?`<p>${esc(m.text).replace(/\n/g,'<br>')}</p>`:markdown(m.text)}</div>`;
+  return s}
+function load(messages,label){ // a fresh document (first open, or a paste)
+  doc.innerHTML='';shown=0;notes=[];strokes=[];history=[];
+  document.querySelectorAll('.cmt').forEach(c=>c.remove());$('empty').style.display='block';
+  append(messages);$('src').innerHTML=label;sizeInk();count();
+}
+function append(messages){ // only new messages are added: marks on the older ones stay where they are
+  const atBottom=scrollY+innerHeight>=document.documentElement.scrollHeight-80;
+  for(;shown<messages.length;shown++)doc.appendChild(section(messages[shown],shown));
+  sizeInk();layout();
+  return atBottom}
+function where(el){ // which message a quote is in, said the way Claude can find it
+  const sec=el&&el.closest&&el.closest('section.msg');if(!sec)return '';
+  const all=[...doc.querySelectorAll('section.msg')],mine=all.filter(x=>x.dataset.role===sec.dataset.role),k=mine.indexOf(sec)+1;
+  if(sec.dataset.role==='user')return `my message ${k} of ${mine.length}`;
+  return k===mine.length?`your latest reply`:`your reply ${k} of ${mine.length}`}
+addEventListener('paste',e=>{
+  if(e.target.closest&&e.target.closest('.cmt,.note-in'))return;
+  const t=e.clipboardData&&e.clipboardData.getData('text/plain');if(!t||!t.trim())return;
+  if(notes.length&&!confirm('Replace this reply and drop your marks?'))return;
+  e.preventDefault();load([{role:'assistant',text:t}],'<b>Pasted reply</b> · '+t.length.toLocaleString()+' characters · <a id="again">paste another</a>');
+});
+$('src').addEventListener('click',e=>{if(e.target.id==='again')toast('Copy another reply, then press Ctrl+V here')});
+
+/* ---------- selection → comment / highlight / cross out ---------- */
+let range=null;
+document.addEventListener('mouseup',e=>{
+  if(pop.contains(e.target))return;
+  setTimeout(()=>{const s=getSelection();
+    if(!s.rangeCount||s.isCollapsed||!doc.contains(s.anchorNode)||!doc.contains(s.focusNode)||$('pasteZone')){pop.style.display='none';return}
+    range=s.getRangeAt(0).cloneRange();const r=range.getBoundingClientRect(),w=wrap.getBoundingClientRect();
+    pop.style.display='flex';const pw=pop.offsetWidth;
+    pop.style.left=Math.max(4,Math.min(w.width-pw-4,r.left-w.left+r.width/2-pw/2))+'px';pop.style.top=Math.max(0,r.top-w.top-44)+'px'},0)});
+document.addEventListener('mousedown',e=>{if(!pop.contains(e.target))pop.style.display='none'});
+function wrapRange(rg,cls){ // a mark per text piece, so selections across paragraphs and list items work too
+  const marks=[],walker=document.createTreeWalker(rg.commonAncestorContainer.nodeType===3?rg.commonAncestorContainer.parentNode:rg.commonAncestorContainer,NodeFilter.SHOW_TEXT);
+  const nodes=[];while(walker.nextNode()){const n=walker.currentNode;if(rg.intersectsNode(n)&&n.textContent.trim())nodes.push(n)}
+  for(const n of nodes){let s=0,e=n.textContent.length;if(n===rg.startContainer)s=rg.startOffset;if(n===rg.endContainer)e=rg.endOffset;if(e<=s)continue;
+    const part=n.splitText(s);part.splitText(e-s);const m=document.createElement('mark');m.className=cls;part.replaceWith(m);m.appendChild(part);marks.push(m)}
+  return marks}
+pop.onclick=e=>{let a=e.target.closest('button')?.dataset.a;if(!a||!range)return;const voice=a==='voice';if(voice)a='comment';
+  const els=wrapRange(range,a==='comment'?'cm':a);const quote=els.map(m=>m.textContent).join(' ').replace(/\s+/g,' ').trim(); // pieces joined with a space, so text across paragraphs reads right
+  getSelection().removeAllRanges();pop.style.display='none';if(!els.length)return;
+  const note={id:++uid,kind:a,quote,els,text:''};notes.push(note);history.push({type:'note',note});
+  if(a==='comment'){const sup=document.createElement('sup');sup.className='pin';els[els.length-1].after(sup);note.sup=sup;renumber();addCard(note,true);
+    if(voice)setTimeout(()=>{const t=note.card.querySelector('.t');dictate(t,note.card.querySelector('.mic'))},30)}
+  else els.forEach(m=>{m.title=(a==='hl'?'Highlighted':'Crossed out')+' · click for options';m.onclick=ev=>markMenu(note,ev)});
+  count()};
+
+/* ---------- a mark's menu, and one comment for many marks ---------- */
+const mpop=$('mpop');let menuFor=null;
+function markMenu(note,ev){
+  ev.stopPropagation();if(note.cid){note.cid.card.querySelector('.t').focus();return} // already commented: go to it
+  menuFor=note;const w=wrap.getBoundingClientRect();mpop.style.display='flex';
+  mpop.style.left=Math.max(4,ev.clientX-w.left-60)+'px';mpop.style.top=(ev.clientY-w.top+14)+'px'}
+mpop.onclick=e=>{const a=e.target.closest('button')?.dataset.a;const n=menuFor;mpop.style.display='none';menuFor=null;if(!n)return;
+  if(a==='remove')remove(n);else commentOn([n])};
+document.addEventListener('mousedown',e=>{if(!mpop.contains(e.target))mpop.style.display='none'});
+const pending=()=>[...notes.filter(n=>(n.kind==='hl'||n.kind==='st')&&!n.cid),...strokes.filter(s=>!s.cid)];
+function commentOn(refs){ // one comment card that speaks for every mark in refs (highlights, cross-outs, drawings)
+  if(!refs.length)return;
+  const els=refs.flatMap(r=>r.els||[]);
+  const note={id:++uid,kind:'comment',refs,els,quote:'',text:''};refs.forEach(r=>r.cid=note);
+  els.forEach(m=>m.classList.add('taken'));
+  if(els.length){const sup=document.createElement('sup');sup.className='pin';els[els.length-1].after(sup);note.sup=sup}
+  notes.push(note);history.push({type:'note',note});renumber();addCard(note,true);count()}
+$('groupBtn').onclick=()=>commentOn(pending());
+
+/* ---------- margin cards: next to their text, edited in place, folded when long ---------- */
+function renumber(){let n=0;notes.filter(x=>x.kind==='comment').forEach(x=>{x.n=++n;if(x.sup)x.sup.textContent=n;if(x.card)x.card.querySelector('.n').textContent=n});paint()} // a drawings-only comment has no pin in the text: its number is drawn on the drawing
+function addCard(note,focus){
+  $('empty').style.display='none';
+  const c=document.createElement('div');c.className='cmt';note.card=c;
+  c.innerHTML=`<div class="hd"><span class="n">${note.n}</span>You · now<button class="mic" title="Dictate (speech to text)">🎤</button><button class="lang" title="Dictation language">${LANG==='fr-BE'?'FR':'EN'}</button><button class="x" title="Delete">✕</button></div><div class="q"></div><div class="t" contenteditable="true" spellcheck="false"></div><button class="more" style="display:none">show all</button>`;
+  const q=c.querySelector('.q');
+  if(note.refs){q.innerHTML='';note.refs.forEach(r=>{const d=document.createElement('div');d.textContent=r.pts?(r.quote?'✏️ drawing around “'+r.quote+'”':'✏️ a drawing'):(r.kind==='st'?'✕ ':'▮ ')+'“'+r.quote+'”';q.appendChild(d)})}
+  else q.textContent='“'+note.quote+'”';
+  const t=c.querySelector('.t'),more=c.querySelector('.more');t.textContent=note.text||''; // a card drawn again keeps its words
+  const fold=()=>{more.style.display=!c.classList.contains('open')&&document.activeElement!==t&&t.scrollHeight>t.clientHeight+2?'block':'none'};
+  t.oninput=()=>{note.text=t.innerText.trim();layout()};
+  t.onblur=()=>{note.text=t.innerText.trim();if(!note.text&&!(rec&&rec.btn&&c.contains(rec.btn)))remove(note);else{c.classList.remove('open');setTimeout(()=>{fold();layout()},0)}};
+  t.onfocus=()=>{more.style.display='none';layout()};
+  t.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();t.blur()}if(e.key==='Escape')t.blur();e.stopPropagation()};
+  more.onclick=()=>{c.classList.add('open');fold();layout()};
+  c.querySelector('.x').onclick=()=>remove(note);
+  c.querySelector('.mic').onmousedown=e=>e.preventDefault(); // keep the text focused
+  c.querySelector('.mic').onclick=e=>dictate(t,e.currentTarget);
+  c.querySelector('.lang').onmousedown=e=>e.preventDefault();
+  c.querySelector('.lang').onclick=e=>{toggleLang();document.querySelectorAll('.lang').forEach(b=>b.textContent=LANG==='fr-BE'?'FR':'EN')};
+  const hot=on=>{c.classList.toggle('hot',on);note.els.forEach(m=>m.classList.toggle('hot',on));if(note.refs&&note.refs.some(r=>r.pts)){hotStrokes=on?note.refs.filter(r=>r.pts):[];paint()}};
+  c.onmouseenter=()=>hot(true);c.onmouseleave=()=>hot(false);
+  note.els.forEach(m=>{m.onmouseenter=()=>hot(true);m.onmouseleave=()=>hot(false);m.onclick=()=>t.focus()});
+  $('margin').appendChild(c);layout();if(focus)setTimeout(()=>t.focus(),0);
+}
+function remove(note){
+  if(note.card)note.card.remove();note.sup&&note.sup.remove();
+  if(note.refs){note.refs.forEach(r=>{r.cid=null;(r.els||[]).forEach(m=>m.classList.remove('taken'))});note.refs=[];note.els=[]}
+  if(note.cid){const g=note.cid;g.refs=g.refs.filter(r=>r!==note);g.els=g.els.filter(m=>!note.els.includes(m));if(!g.refs.length)remove(g);else if(g.card){g.card.remove();addCard(g,false)}}
+  note.els.forEach(m=>{if(m.isConnected){const p=m.parentNode;m.replaceWith(...m.childNodes);p.normalize()}});
+  notes=notes.filter(n=>n!==note);renumber();layout();count();
+  if(!notes.some(n=>n.kind==='comment'))$('empty').style.display='block'}
+function layout(){ // each card sits next to its text, pushed down so cards never overlap
+  if(matchMedia('(max-width:860px)').matches)return;
+  const m=$('margin').getBoundingClientRect();let y=40;
+  const topOf=n=>n.els.length?n.els[0].getBoundingClientRect().top:ink.getBoundingClientRect().top+Math.min(...n.refs[0].pts.map(p=>p.y));
+  notes.filter(n=>n.card).sort((a,b)=>topOf(a)-topOf(b)).forEach(n=>{
+    const want=topOf(n)-m.top-6;const top=Math.max(want,y);n.card.style.top=top+'px';y=top+n.card.offsetHeight+8})}
+addEventListener('resize',()=>{layout();sizeInk()});
+function count(){const c=notes.filter(n=>n.kind==='comment').length,h=notes.filter(n=>n.kind==='hl').length,s=notes.filter(n=>n.kind==='st').length,d=strokes.length;
+  const parts=[c?`${c} comment${c===1?'':'s'}`:'',h?`${h} highlight${h===1?'':'s'}`:'',s?`${s} crossed out`:'',d?`${d} drawing${d===1?'':'s'}`:''].filter(Boolean);
+  $('count').textContent=parts.length?parts.join(' · '):'nothing marked yet';
+  const p=pending().length,g=$('groupBtn');g.style.display=p?'':'none';g.textContent=p===1?'💬 Comment on this mark':`💬 Comment on ${p} marks`}
+
+/* ---------- drawing: on the text, scrolls with it; turned into the words it covers ---------- */
+const ink=$('ink'),g=ink.getContext('2d');let drawing=false,pen=null,hotStrokes=[];
+function sizeInk(){ink.width=wrap.clientWidth*devicePixelRatio;ink.height=wrap.scrollHeight*devicePixelRatio;ink.style.width=wrap.clientWidth+'px';ink.style.height=wrap.scrollHeight+'px';
+  g.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);paint()}
+function paint(){g.clearRect(0,0,ink.width,ink.height);g.strokeStyle='#e5484d';g.lineWidth=3;g.lineCap='round';g.lineJoin='round';
+  for(const s of strokes){g.lineWidth=hotStrokes.includes(s)?5:3;g.beginPath();s.pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.stroke()}
+  for(const s of strokes){if(!s.cid||!s.cid.n)continue; // the comment's number, as a pin at the drawing's top-left
+    const x=Math.min(...s.pts.map(p=>p.x)),y=Math.min(...s.pts.map(p=>p.y)),R=9;
+    g.beginPath();g.moveTo(x,y+R);g.lineTo(x,y);g.arc(x+R,y,R,Math.PI,Math.PI/2,false);g.closePath();
+    g.save();g.translate(0,-R);g.fillStyle='#e5484d';g.fill();g.fillStyle='#fff';g.font='700 10px Consolas,monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(s.cid.n,x+R,y+1);g.restore();
+    g.strokeStyle='#e5484d'}}
+const setDraw=on=>{drawing=on;wrap.classList.toggle('drawing',on);$('drawBtn').classList.toggle('on',on);$('textBtn').classList.toggle('on',!on)};
+$('drawBtn').onclick=()=>setDraw(true);
+$('textBtn').onclick=()=>setDraw(false);
+ink.onpointerdown=e=>{const r=ink.getBoundingClientRect();pen={pts:[{x:e.clientX-r.left,y:e.clientY-r.top}]};ink.setPointerCapture(e.pointerId)};
+ink.onpointermove=e=>{if(!pen)return;const r=ink.getBoundingClientRect();pen.pts.push({x:e.clientX-r.left,y:e.clientY-r.top});strokes.push(pen);paint();strokes.pop()};
+ink.onpointerup=()=>{if(pen&&pen.pts.length>2){Object.assign(pen,wordsUnder(pen)); /* read the words now, while the drawing is on screen */strokes.push(pen);history.push({type:'stroke',stroke:pen});count()}pen=null;paint()};
+function wordsUnder(s){ // the text inside a drawing's bounding box, read with the browser's own hit-testing
+  const r=ink.getBoundingClientRect(),xs=s.pts.map(p=>p.x),ys=s.pts.map(p=>p.y);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),seen=new Set(),words=[];
+  ink.style.pointerEvents='none';
+  for(let y=y0;y<=y1+1;y+=10)for(let x=x0;x<=x1+1;x+=8){
+    const cr=document.caretRangeFromPoint&&document.caretRangeFromPoint(r.left+x,r.top+y);if(!cr||!doc.contains(cr.startContainer)||cr.startContainer.nodeType!==3||cr.startContainer.parentNode.closest('.who'))continue; // the You / Claude labels aren't text to quote
+    const t=cr.startContainer.textContent;let a=cr.startOffset,b=a;while(a>0&&/\S/.test(t[a-1]))a--;while(b<t.length&&/\S/.test(t[b]))b++;
+    const key=cr.startContainer.__id||(cr.startContainer.__id=Math.random());const k=key+':'+a;if(a===b||seen.has(k))continue;seen.add(k);
+    words.push({w:t.slice(a,b),node:cr.startContainer,top:cr.getBoundingClientRect().top,left:cr.getBoundingClientRect().left})}
+  ink.style.pointerEvents='';
+  words.sort((p,q)=>Math.abs(p.top-q.top)>4?p.top-q.top:p.left-q.left);
+  return {quote:words.map(w=>w.w).join(' ').slice(0,300),where:words.length?where(words[0].node.parentNode):''}}
+
+/* ---------- speech to text (the browser's own engine; EN / FR) ---------- */
+let LANG='en-US',rec=null;
+try{LANG=localStorage.getItem('redline-lang')||'en-US'}catch{}
+function toggleLang(){LANG=LANG==='en-US'?'fr-BE':'en-US';try{localStorage.setItem('redline-lang',LANG)}catch{};toast('Dictation: '+(LANG==='fr-BE'?'français':'English'))}
+function stopDictation(){if(!rec)return;const r=rec;rec=null;r.btn.classList.remove('rec');try{r.stop()}catch{}}
+function dictate(target,btn){
+  if(rec){const same=rec.btn===btn;stopDictation();if(same)return}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('No speech engine in this browser: use Windows dictation (Win+H) instead');target.focus();return}
+  const isInput=target.tagName==='INPUT',get=()=>isInput?target.value:target.innerText,set=v=>{if(isInput)target.value=v;else target.innerText=v;target.dispatchEvent(new Event('input'))};
+  const base=get().trim()?get().trim()+' ':'';
+  rec=new SR();rec.lang=LANG;rec.interimResults=true;rec.continuous=true;rec.btn=btn;btn.classList.add('rec');
+  rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;set(base+s)};
+  rec.onerror=e=>{toast('Dictation: '+e.error);stopDictation()};rec.onend=()=>stopDictation();
+  target.focus();rec.start();toast('Listening… click 🎤 again to stop')}
+palette.mount($('palBtn'),$('palMenu'));
+$('noteMic').onclick=e=>dictate($('note'),e.currentTarget);
+$('note').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();stopDictation();served?send():$('copyBtn').click()}}); // Enter in the note sends (copies on the work-PC page)
+
+/* ---------- undo ---------- */
+function undo(){const h=history.pop();if(!h)return;if(h.type==='stroke'){if(h.stroke.cid){const g=h.stroke.cid;g.refs=g.refs.filter(r=>r!==h.stroke);if(!g.refs.length)remove(g)}strokes=strokes.filter(s=>s!==h.stroke);paint();count()}else if(notes.includes(h.note))remove(h.note)}
+$('undoBtn').onclick=undo;
+
+/* ---------- what Claude gets: exact quotes, no image ---------- */
+function result(){
+  return{
+    message:$('note').value.trim(),
+    comments:notes.filter(n=>n.kind==='comment'&&n.text).map(n=>n.refs
+      ?{n:n.n,text:n.text,quotes:n.refs.map(r=>r.pts?{quote:r.quote||'',where:r.where||'',drawn:true}:{quote:r.quote,where:where(r.els[0]),crossed:r.kind==='st'})}
+      :{n:n.n,quote:n.quote,text:n.text,where:where(n.els[0])}),
+    highlights:notes.filter(n=>n.kind==='hl'&&!n.cid).map(n=>({quote:n.quote,where:where(n.els[0])})),
+    crossed:notes.filter(n=>n.kind==='st'&&!n.cid).map(n=>({quote:n.quote,where:where(n.els[0])})),
+    drawn:strokes.filter(s=>!s.cid&&s.quote).map(s=>({quote:s.quote,where:s.where}))};
+}
+function asText(r){ // the same words the mod sends, for pasting into any Claude chat
+  const q=s=>`“${s}”`,w=x=>x.where?` (${x.where})`:'',one=x=>`  - ${q(x.quote)}${w(x)}`,L=['Redline Text: I reviewed our conversation. These are exact quotes from it.'];
+  if(r.message)L.push(`My note: ${r.message}`);
+  if(r.comments.length){L.push('Comments:');r.comments.forEach(c=>L.push(c.quotes?`  #${c.n} on ${c.quotes.map(x=>x.drawn&&!x.quote?'(a drawing)'+w(x):(x.drawn?'(drawn around) ':x.crossed?'(crossed out) ':'')+q(x.quote)+w(x)).join(' + ')}: ${c.text}`:`  #${c.n} on ${q(c.quote)}${w(c)}: ${c.text}`))}
+  if(r.highlights.length){L.push('Highlighted (keep / important):');r.highlights.forEach(x=>L.push(one(x)))}
+  if(r.crossed.length){L.push('Crossed out (remove or wrong):');r.crossed.forEach(x=>L.push(one(x)))}
+  if(r.drawn.length){L.push('Drew around:');r.drawn.forEach(x=>L.push(one(x)))}
+  return L.join('\n')}
+const empty=r=>!r.message&&!r.comments.length&&!r.highlights.length&&!r.crossed.length&&!r.drawn.length;
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch{}
+  const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return ok}
+$('copyBtn').onclick=async()=>{if(document.activeElement)document.activeElement.blur();const r=result();if(empty(r)){toast('Mark something first');return}
+  toast(await copyText(asText(r))?'Copied: paste it into any Claude chat':'Copy failed: select and copy by hand')};
+let sending=false,phase='idle',sentAt=0,shownAtSend=0,sawBusy=false,ticker=null;
+const DOTS='<span class="dots"><i></i><i></i><i></i></span>';
+function placeholder(){ // "Claude is thinking…" at the very end of the conversation, with a timer
+  let p=$('pending');if(!p){p=document.createElement('section');p.id='pending';p.className='msg msg-claude';
+    p.innerHTML=`<div class="who">Claude</div><div class="pending">${DOTS}<span>Claude is thinking…</span><span class="tm" id="tm">0:00</span></div>`}
+  doc.appendChild(p);return p}
+function setPhase(next){
+  phase=next;const b=$('sendBtn'),st=$('status');clearInterval(ticker);
+  if(next==='sending'){b.style.display='';b.disabled=true;b.classList.add('busy');b.innerHTML='<span class="spin"></span>Sending…';st.style.display='none'}
+  else if(next==='thinking'){b.style.display='none';st.className='pill';st.innerHTML=DOTS+'Claude is answering';st.style.display='';placeholder();
+    ticker=setInterval(()=>{const s=Math.floor((Date.now()-sentAt)/1000),t=$('tm');if(t)t.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+      if(s>900)setPhase('idle')},1000)} // a quarter of an hour: stop waiting
+  else{b.style.display='';b.disabled=false;b.classList.remove('busy');b.textContent='Send to Claude';$('pending')?.remove();
+    if(next==='replied'){st.className='pill ok';st.innerHTML='✓ Claude replied · <span class="jump" id="jump">Jump to it ↓</span>';st.style.display='';
+      $('jump').onclick=()=>{const first=[...doc.querySelectorAll('section.msg-claude')].find(x=>+x.dataset.i>=shownAtSend);(first||doc.lastElementChild).scrollIntoView({behavior:'smooth',block:'start'});st.style.display='none'};
+      setTimeout(()=>{if(phase==='replied'){st.style.display='none';phase='idle'}},30000)}
+    else st.style.display='none'}
+}
+async function send(){
+  if(!served||sending||phase==='thinking')return;if(document.activeElement)document.activeElement.blur();const r=result();if(empty(r)){toast('Mark something first');return}
+  sending=true;setPhase('sending');
+  try{const res=await fetch('/send-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});const j=await res.json();if(!j.ok)throw new Error(j.error||'failed');
+    [...notes].forEach(remove);strokes=[];history=[];paint();$('note').value='';count();
+    sentAt=Date.now();shownAtSend=shown;sawBusy=false;setPhase(live?'thinking':'idle');if(!live)toast('Sent to Claude')}
+  catch(err){toast('Send failed: '+err.message);setPhase('idle')}
+  sending=false}
+$('sendBtn').onclick=send;
+
+addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();served?send():$('copyBtn').click();return}
+  if(['INPUT','TEXTAREA'].includes(e.target.tagName)||e.target.isContentEditable)return;
+  if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return}
+  if(e.key.toLowerCase()==='d'&&!e.ctrlKey&&!e.altKey)setDraw(true);
+  if(e.key.toLowerCase()==='t'&&!e.ctrlKey&&!e.altKey)setDraw(false);
+  if(e.key.toLowerCase()==='c'&&!e.ctrlKey&&!e.altKey&&pending().length)$('groupBtn').click();
+  if(e.key==='Escape'&&drawing)setDraw(false)});
+$('pasteBox').addEventListener('input',e=>{const t=e.target.value;if(t.trim().length>20)load([{role:'assistant',text:t}],'<b>Pasted reply</b> · '+t.length.toLocaleString()+' characters')});
+
+/* opened by the mod: the conversation is at /doc (kept up to date after every reply), and Send goes straight back */
+const label=n=>live?`<b>This conversation</b> · ${n} message${n===1?'':'s'} · <span style="color:var(--green,#3dbb6c)">● live</span>`:'<b>Claude\'s reply</b>';
+(async()=>{
+  if(!served){sizeInk();return}
+  try{const j=await (await fetch('/doc')).json();document.title=j.title||'Redline Text';live=!!j.live;version=j.version;
+    $('sendBtn').style.display='';load(j.messages,label(j.messages.length));
+    scrollTo(0,document.documentElement.scrollHeight); // start at the latest message
+    if(live)setInterval(poll,2000)}
+  catch{sizeInk()}
+})();
+async function poll(){ // a new reply? add it below, and follow it if you were already at the bottom
+  try{const j=await (await fetch('/doc')).json();if(!j.messages)return;
+    if(phase==='thinking'){if(j.busy)sawBusy=true;
+      // done when Claude worked and stopped, or a reply came in after ours without us catching the busy moment
+      const replied=j.messages.length>shownAtSend&&j.messages[j.messages.length-1].role==='assistant';
+      if(!j.busy&&(sawBusy||replied)&&Date.now()-sentAt>1500){if(j.version!==version&&j.messages.length>=shown){version=j.version;append(j.messages);$('src').innerHTML=label(j.messages.length)}setPhase('replied');return}}
+    if(j.version===version)return;version=j.version;
+    if(j.messages.length<shown)return; // the conversation was cleared or compacted: keep what is on screen
+    const follow=append(j.messages);$('src').innerHTML=label(j.messages.length);
+    if(phase==='thinking')placeholder(); // keep "Claude is thinking…" below whatever just arrived
+    if(follow)scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});else if(phase!=='thinking')toast('New reply below ↓')}
+  catch{}
+}
+addEventListener('pagehide',()=>{if(served&&!sending)navigator.sendBeacon('/closed')});
+</script>
+</body>
+</html>
